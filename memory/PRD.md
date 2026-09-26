@@ -40,7 +40,19 @@ Website laporan rasio elektrifikasi Kabupaten Murung Raya dengan Admin Panel: Lo
 - No email/password-reset (username-only internal login).
 - Period kode format: TW1-2026 / TW2-2026.
 
-## Import & Audit (2026-06)
+## Portable / Offline (2026-06) — RE-Baru
+- [x] Import repo besatgalapa-cpu/RE-Baru (main). Deps installed, app sehat di preview.
+- [x] Fase 1: object storage cloud DIHAPUS → storage lokal (`LOCAL_STORAGE_DIR`, portable: `data/galeri`). Seed galeri online dihapus. Font Google → @fontsource (offline). `api.js` fallback same-origin. FastAPI serve build React (`FRONTEND_BUILD_DIR`).
+- [x] Fase 2: `scripts/build_portable.sh` → `dist/RE-Baru-Portable/` + zip (Python 3.11.9 embeddable + wheel win_amd64, mongod.exe 7.0.14, vc_redist, frontend build offline, `JALANKAN_APLIKASI.bat`, `PANDUAN.md`). `backend/launcher.py`: cek app sudah jalan, pilih port kosong (8765/27117), start mongod (127.0.0.1, dbpath data/db), uvicorn in-process, buka browser, backup otomatis saat tutup, mongod shutdown rapi, handler console close.
+- [x] Fase 3: `portable.py` backup zip (db.json via bson json_util + galeri) rolling 5 (auto_), manual_ tidak dihapus; endpoints /api/backup (list/create/download/restore/delete), /api/system/info, /api/system/shutdown (portable only); UI BackupPanel di Pengaturan + panel Tutup Aman (portable only). PWA: manifest lokal, icon, sw.js, index.offline.html.
+- [x] Tested: launcher end-to-end disimulasikan di Linux (mongod symlink) — login, backup, shutdown → auto backup → mongod stop OK. Testing agent iteration_1: backend 100%, frontend 100%.
+- Unduh paket: `GET /api/portable/download` (dist/RE-Baru-Portable.zip, ~72 MB).
+
+## Backlog Portable
+- P1: Uji nyata di PC Windows kedua (tanpa Python/Mongo) — belum bisa dilakukan dari sini.
+- P2: Opsi migrasi ke DB embedded single-file (hanya jika USB tidak andal; perlu persetujuan user).
+- P2: mongod 4.4 fallback untuk CPU tanpa AVX (otomatis).
+
 - [x] Imported from github.com/besatgalapa-cpu/RE (public). Stack verified = React + FastAPI + MongoDB (matches default).
 - [x] Env restored: JWT_SECRET, ADMIN_USERNAME=admin / ADMIN_PASSWORD=adminRE1234#, EMERGENT_LLM_KEY (object storage untuk Galeri).
 - [x] Backend & frontend boot clean; login + dashboard + seed data verified via curl & screenshot.

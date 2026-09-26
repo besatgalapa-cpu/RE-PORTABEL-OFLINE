@@ -1,3 +1,4 @@
+import os
 import mimetypes
 from portable import GALERI_DIR
 
@@ -8,9 +9,13 @@ def init_storage():
 
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
-    fp = GALERI_DIR / path
-    fp.parent.mkdir(parents=True, exist_ok=True)
-    fp.write_bytes(data)
+    target = GALERI_DIR / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0), 0o644)
+    try:
+        os.write(fd, data)
+    finally:
+        os.close(fd)
     return {"path": path, "size": len(data)}
 
 

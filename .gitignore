@@ -93,3 +93,9 @@ credentials.json
 frontend/node_modules/.cache/default-development/0.pack
 dist/dl/mongodb.zip
 frontend/node_modules/.cache/default-development/5.pack
+
+# Data lokal (mode offline/portable)
+backend/local_storage/
+backend/backups/
+dist/
+frontend/node_modules/.cache/default-development/1.pack
