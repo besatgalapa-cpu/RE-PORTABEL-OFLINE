@@ -1,4 +1,5 @@
 import os
+import shutil
 import zipfile
 from pathlib import Path
 from datetime import datetime, timezone
@@ -54,12 +55,49 @@ def prune_backups(kind: str):
         f.unlink(missing_ok=True)
 
 
+def get_secondary_dir(db) -> str:
+    s = db.settings.find_one({"key": "main"}, {"backup_secondary_dir": 1}) or {}
+    return (s.get("backup_secondary_dir") or "").strip()
+
+
+def check_dir_writable(raw: str) -> dict:
+    if not raw:
+        return {"ok": True, "path": "", "message": "Cadangan kedua dinonaktifkan"}
+    p = Path(raw).expanduser()
+    if not p.is_absolute():
+        return {"ok": False, "path": raw, "message": "Gunakan path lengkap, contoh D:\\Cadangan-RE"}
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        probe = p / ".re_baru_tes_tulis"
+        probe.write_text("ok")
+        probe.unlink()
+        return {"ok": True, "path": str(p), "message": "Folder dapat ditulis"}
+    except Exception as e:
+        return {"ok": False, "path": str(p), "message": f"Folder tidak bisa ditulis: {e}"}
+
+
+def _copy_to_secondary(target: Path, secondary: str, kind: str) -> tuple:
+    if not secondary:
+        return [], None
+    chk = check_dir_writable(secondary)
+    if not chk["ok"]:
+        return [], chk["message"]
+    dest_dir = Path(chk["path"])
+    dest = dest_dir / target.name
+    shutil.copy2(target, dest)
+    if kind == "auto" and BACKUP_KEEP > 0:
+        for f in sorted(dest_dir.glob("auto_*.zip"))[:-BACKUP_KEEP]:
+            f.unlink(missing_ok=True)
+    return [str(dest)], None
+
+
 def create_backup(kind: str = "manual") -> dict:
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     target = BACKUP_DIR / f"{kind}_{stamp}.zip"
     client = _client()
     db = client[os.environ["DB_NAME"]]
+    secondary = get_secondary_dir(db)
     payload = {"created_at": datetime.now(timezone.utc).isoformat(), "db_name": db.name, "collections": {}}
     for coll in db.list_collection_names():
         if not coll.startswith("system."):
@@ -74,7 +112,12 @@ def create_backup(kind: str = "manual") -> dict:
                     zf.write(fp, "galeri/" + fp.relative_to(GALERI_DIR).as_posix())
     tmp.replace(target)
     prune_backups(kind)
-    return backup_info(target)
+    info = backup_info(target)
+    try:
+        info["copies"], info["copy_error"] = _copy_to_secondary(target, secondary, kind)
+    except Exception as e:
+        info["copies"], info["copy_error"] = [], str(e)
+    return info
 
 
 def restore_backup(name: str) -> dict:

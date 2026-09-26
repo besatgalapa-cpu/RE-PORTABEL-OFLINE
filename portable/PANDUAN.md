@@ -38,8 +38,16 @@ Aplikasi tampil di jendela sendiri tanpa tab browser. Server tetap harus dijalan
 - **Manual**: menu **Pengaturan → Backup Sekarang** → file `backup\manual_....zip` (tidak dihapus otomatis).
 - **Restore**: menu **Pengaturan → pilih backup → Pulihkan**. Sebelum memulihkan, sistem membuat
   backup otomatis dulu sebagai pengaman. Setelah restore, login ulang.
+- **Folder cadangan kedua** (menu Pengaturan → "Folder Cadangan Kedua"): isi path di luar flashdisk, misal
+  `D:\Cadangan-RE`. Setiap backup manual & otomatis ikut disalin ke sana. Jika PC lain tidak punya folder itu,
+  penyalinan dilewati dengan peringatan (backup di flashdisk tetap dibuat).
 - Isi file backup: seluruh database (`db.json`) + semua foto galeri. Salin file `.zip` ini ke
   komputer/harddisk lain secara berkala sebagai cadangan di luar flashdisk.
+
+## 5b. Bila `.bat` Gagal — Kirim Pesan Errornya
+Jika jendela hitam menampilkan `[X]`, foto/salin teks di jendela tersebut beserta 10 baris terakhir
+`data\log\mongod.log`, lalu kirimkan agar bisa diperbaiki. Launcher sudah menampilkan ringkasan log
+mongod secara otomatis saat gagal.
 
 ## 6. Struktur Folder
 ```
@@ -48,7 +56,8 @@ RE-Baru-Portable/
 ├── PANDUAN.md              <- file ini
 ├── runtime/
 │   ├── python/             Python embeddable + semua library backend
-│   ├── mongodb/mongod.exe  Database MongoDB portable
+│   ├── mongodb/mongod.exe  Database MongoDB 7 portable
+│   │   └── legacy/mongod.exe  MongoDB 4.4 (otomatis dipakai bila CPU tanpa AVX)
 │   └── vcredist/           Installer Visual C++ Runtime (dipakai otomatis bila perlu)
 ├── app/
 │   ├── backend/            Server FastAPI (+ .env konfigurasi lokal)
@@ -66,7 +75,7 @@ RE-Baru-Portable/
 | Windows menampilkan "Windows protected your PC" saat klik `.bat` | SmartScreen | Klik **More info → Run anyway** |
 | Antivirus memblokir `mongod.exe` / `python.exe` | False positive | Tambahkan folder `RE-Baru-Portable` ke daftar pengecualian (exclusion) antivirus |
 | "Database gagal start" | Visual C++ Runtime belum ada | `.bat` memasang otomatis dari `runtime\vcredist`. Bila gagal, jalankan `vc_redist.x64.exe` manual (butuh hak admin sekali saja) |
-| "Database gagal start" di PC lama | CPU tanpa instruksi AVX (MongoDB ≥5 butuh AVX) | Ganti `runtime\mongodb\mongod.exe` dengan MongoDB **4.4** versi ZIP Windows (`mongodb-windows-x86_64-4.4.x.zip` → ambil `bin\mongod.exe`) |
+| "Database gagal start" di PC lama | CPU tanpa instruksi AVX (MongoDB ≥5 butuh AVX) | **Otomatis**: launcher mendeteksi CPU tanpa AVX dan memakai `runtime\mongodb\legacy\mongod.exe` (MongoDB 4.4). Data lama yang dibuat MongoDB 7 dipindah ke `data\db_modern_TANGGAL` lalu dipulihkan otomatis dari backup terbaru di `backup\` (format backup tidak tergantung versi) |
 | Browser tidak terbuka otomatis | Default browser belum diset | Buka manual `http://127.0.0.1:8765` (port tampil di jendela hitam) |
 | Port 8765 / 27117 terpakai program lain | Bentrok port | Otomatis: launcher memilih port kosong berikutnya dan menampilkannya di jendela hitam |
 | Aplikasi terasa lambat | Kecepatan flashdisk | Gunakan flashdisk **USB 3.0** berkualitas, atau salin folder ke harddisk PC |

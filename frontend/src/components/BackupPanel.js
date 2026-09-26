@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { apiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { SecondaryBackupDir } from "@/components/SecondaryBackupDir";
 import { Database, HardDrive, Loader2, Download, RotateCcw, Trash2, Power, Usb, ShieldCheck, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,7 +77,12 @@ export function BackupPanel() {
 
   const backupNow = async () => {
     setBusy("backup");
-    try { const { data } = await api.post("/backup"); toast.success(`Backup dibuat: ${data.name}`); load(); }
+    try {
+      const { data } = await api.post("/backup");
+      toast.success(`Backup dibuat: ${data.name}${data.copies?.length ? " (+ salinan ke folder kedua)" : ""}`);
+      if (data.copy_error) toast.warning(`Salinan ke folder kedua gagal: ${data.copy_error}`);
+      load();
+    }
     catch (e) { toast.error(apiError(e)); } finally { setBusy(""); }
   };
   const restore = async (name) => {
@@ -112,13 +118,14 @@ export function BackupPanel() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" data-testid="system-info">
             <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border ${info.portable_mode ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
               <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span data-testid="system-mode">{info.portable_mode ? "Mode Portable / Offline aktif — data tersimpan di flashdisk" : "Mode server (preview) — database lokal MongoDB"}</span>
+              <span data-testid="system-mode">{info.portable_mode ? `Mode Portable / Offline aktif — data tersimpan di flashdisk${info.mongo_engine === "legacy" ? " (MongoDB 4.4 legacy, CPU tanpa AVX)" : ""}` : "Mode server (preview) — database lokal MongoDB"}</span>
             </div>
             <div className="flex items-center gap-2 rounded-xl px-3 py-2 border bg-slate-50 border-slate-200 text-slate-600 font-mono truncate">
               <FolderOpen className="w-4 h-4 shrink-0" /> <span className="truncate" title={info.backup_dir}>{info.backup_dir}</span>
             </div>
           </div>
         )}
+        {canWrite && <SecondaryBackupDir canManage={canManage} />}
         {canWrite && (
           <div>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Riwayat Backup <span className="text-slate-400 normal-case font-normal">(otomatis disimpan {info?.backup_keep ?? 5} versi terakhir)</span></div>

@@ -99,3 +99,5 @@ backend/local_storage/
 backend/backups/
 dist/
 frontend/node_modules/.cache/default-development/1.pack
+dist/dl/mongodb44.zip
+frontend/node_modules/.cache/default-development/3.pack

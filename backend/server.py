@@ -21,7 +21,7 @@ from auth import (hash_password, verify_password, create_access_token,
                   create_refresh_token, get_current_user, seed_admin)
 from excel_parser import parse_re_workbook
 from storage import init_storage, put_object, get_object
-from portable import (create_backup, list_backups, restore_backup, delete_backup, backup_path,
+from portable import (create_backup, list_backups, restore_backup, delete_backup, backup_path, check_dir_writable,
                       GALERI_DIR, BACKUP_DIR, FRONTEND_BUILD_DIR, BACKUP_KEEP, PORTABLE_MODE)
 import asyncio
 from fastapi.responses import FileResponse
@@ -616,12 +616,34 @@ async def system_info(user=Depends(current_user)):
         "mongo_host": mongo_url.split("@")[-1], "galeri_dir": str(GALERI_DIR),
         "backup_dir": str(BACKUP_DIR), "backup_keep": BACKUP_KEEP,
         "can_shutdown": uvicorn_server is not None,
+        "mongo_engine": os.environ.get("MONGO_ENGINE", ""),
     }
 
 
 @api_router.get("/backup")
 async def backup_list(user=Depends(require("data:write"))):
     return list_backups()
+
+
+class BackupConfigInput(BaseModel):
+    secondary_dir: str = ""
+
+
+@api_router.get("/backup/config")
+async def backup_config_get(user=Depends(require("data:write"))):
+    s = await db.settings.find_one({"key": "main"}, {"_id": 0, "backup_secondary_dir": 1}) or {}
+    secondary = (s.get("backup_secondary_dir") or "").strip()
+    return {"secondary_dir": secondary, **await asyncio.to_thread(check_dir_writable, secondary)}
+
+
+@api_router.put("/backup/config")
+async def backup_config_put(payload: BackupConfigInput, user=Depends(require("user:manage"))):
+    secondary = payload.secondary_dir.strip()
+    chk = await asyncio.to_thread(check_dir_writable, secondary)
+    if not chk["ok"]:
+        raise HTTPException(status_code=400, detail=chk["message"])
+    await db.settings.update_one({"key": "main"}, {"$set": {"backup_secondary_dir": secondary}}, upsert=True)
+    return {"secondary_dir": secondary, **chk}
 
 
 @api_router.post("/backup")
